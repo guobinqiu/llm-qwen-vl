@@ -33,6 +33,7 @@ export default {
       uploadedImages: new Set(), // 存储已上传图片的hash值
       imageCount: 0,
       replyMessage: '',
+      ws: null,
     }
   },
   mounted() {
@@ -59,6 +60,13 @@ export default {
         }
       }
     })
+
+    this.initWebSocket()
+  },
+  destroyed() {
+    if (this.ws) {
+      this.ws.close()
+    }
   },
   methods: {
     initEditor() {
@@ -169,7 +177,7 @@ export default {
           alert('上传失败')
         }
       } catch (err) {
-        alert('上传出错')
+        alert('上传出错', err)
       }
     },
     insertImage(url, filename, fileHash) {
@@ -245,7 +253,7 @@ export default {
         console.log('当前图片数量:', this.imageCount)
       })
     },
-    async sendContent() {
+    getImageUrls() {
       const imageUrls = []
       const imageWrappers = this.$refs.editor.querySelectorAll('.image-wrapper')
       imageWrappers.forEach(wrapper => {
@@ -257,17 +265,41 @@ export default {
           imageUrls.push('https://pics5.baidu.com/feed/0bd162d9f2d3572c09e6decfee70572962d0c30a.jpeg')
         }
       })
-
-      try {
-        const res = await axios.post('http://localhost:8080/chat', {
-          content: this.text,
-          images: imageUrls
-        })
-        this.replyMessage = res.data.reply
-      } catch (err) {
-        console.error('请求出错:', err)
+      return imageUrls
+    },
+    async sendContent() {
+      this.replyMessage = ''
+      const message = {
+        content: this.text,
+        images: this.getImageUrls(),
       }
-    }
+      
+      // 确保 WebSocket 已经打开
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify(message)) // 发送内容和图片的消息
+      } else {
+        console.error("WebSocket 尚未连接或已关闭")
+      }
+    },
+    initWebSocket() {
+      this.ws = new WebSocket("ws://localhost:8080/chat")
+
+      this.ws.onopen = () => {
+        console.log("WebSocket 连接已打开");
+      }
+
+      this.ws.onmessage = (event) => {
+        this.replyMessage += event.data
+      }
+
+      this.ws.onerror = (error) => {
+        console.error("WebSocket 错误:", error)
+      }
+
+      this.ws.onclose = () => {
+        console.log("WebSocket 连接已关闭")
+      }
+    },
   }
 }
 </script>
