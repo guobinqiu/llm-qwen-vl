@@ -55,8 +55,8 @@ func (ossClient *OSSClient) PutObject(bucketName, objectKey, filePath string) er
 
 func main() {
 	endpoint := "oss-cn-hangzhou.aliyuncs.com"
-	accessKeyID := "LTAI5tEtMKGCuhM9tvWYqnZR"
-	accessKeySecret := "85JoaQzd8c2HjOmb7A7G2FnQBmhfKV"
+	accessKeyID := ""
+	accessKeySecret := ""
 	bucketName := "llm-qwen-vl2"
 
 	// 创建 OSSClient 实例
