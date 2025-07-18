@@ -100,8 +100,8 @@ func main() {
 		// filename := fmt.Sprintf("uploads/%d_%s", time.Now().Unix(), filepath.Base(file.Filename))
 		// err = c.SaveUploadedFile(file, filename)
 		// if err != nil {
-		// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		// 	return
+		//  c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		//  return
 		// }
 
 		fileContent, err := file.Open()
@@ -145,8 +145,8 @@ func main() {
 
 		// filePath := filepath.Join("uploads", req.Filename)
 		// if err := os.Remove(filePath); err != nil {
-		// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		// 	return
+		//  c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		//  return
 		// }
 
 		objectKey := fmt.Sprintf("uploads/%s", req.Filename)
