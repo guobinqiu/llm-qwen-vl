@@ -158,7 +158,7 @@ export default {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
         if (res.data.errno === 0 && res.data.data.length > 0) {
-          const url = res.data.data[0]
+          const url = res.data.data
           const filename = url.split('/').pop()
           this.insertImage(url, filename, fileHash)
         } else {

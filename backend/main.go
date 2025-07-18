@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
@@ -47,6 +48,27 @@ func main() {
 	config.BaseURL = baseURL
 	openaiClient := openai.NewClientWithConfig(config)
 
+	endpoint := os.Getenv("OSS_ENDPOINT")
+	accessKeyID := os.Getenv("OSS_ACCESS_KEY_ID")
+	accessKeySecret := os.Getenv("OSS_ACCESS_KEY_SECRET")
+	bucketName := os.Getenv("OSS_BUCKET")
+	if endpoint == "" || accessKeyID == "" || accessKeySecret == "" || bucketName == "" {
+		fmt.Println("检查环境变量设置")
+		return
+	}
+
+	ossClient, err := NewOSSClient(endpoint, accessKeyID, accessKeySecret)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	bucket, err := ossClient.CreateBucket(os.Getenv("OSS_BUCKET"))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	cc := &ChatClient{
 		openaiClient: openaiClient,
 		model:        model,
@@ -75,18 +97,33 @@ func main() {
 			return
 		}
 
-		filename := fmt.Sprintf("uploads/%d_%s", time.Now().Unix(), filepath.Base(file.Filename))
-		err = c.SaveUploadedFile(file, filename)
+		// filename := fmt.Sprintf("uploads/%d_%s", time.Now().Unix(), filepath.Base(file.Filename))
+		// err = c.SaveUploadedFile(file, filename)
+		// if err != nil {
+		// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 	return
+		// }
+
+		fileContent, err := file.Open()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer fileContent.Close()
+
+		objectKey := fmt.Sprintf("uploads/%d_%s", time.Now().Unix(), filepath.Base(file.Filename))
+
+		err = bucket.PutObject(objectKey, fileContent, oss.ObjectACL(oss.ACLPublicRead))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
+		ossURL := fmt.Sprintf("https://%s.%s/%s", bucketName, endpoint, objectKey)
+
 		c.JSON(http.StatusOK, gin.H{
 			"errno": 0,
-			"data": []string{
-				"http://localhost:8080/" + filename,
-			},
+			"data":  ossURL,
 		})
 	})
 
@@ -106,8 +143,15 @@ func main() {
 			return
 		}
 
-		filePath := filepath.Join("uploads", req.Filename)
-		if err := os.Remove(filePath); err != nil {
+		// filePath := filepath.Join("uploads", req.Filename)
+		// if err := os.Remove(filePath); err != nil {
+		// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// 	return
+		// }
+
+		objectKey := fmt.Sprintf("uploads/%s", req.Filename)
+		err := bucket.DeleteObject(objectKey)
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -126,7 +170,6 @@ func main() {
 }
 
 func (cc *ChatClient) ChatLoop(c *gin.Context) {
-	fmt.Println("=======chatloop")
 	// 将 HTTP 连接升级为 WebSocket
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -173,7 +216,6 @@ func (cc *ChatClient) processQuery(ws *websocket.Conn, content string, images []
 
 	// 图片
 	for _, image := range images {
-		image = "https://pics5.baidu.com/feed/0bd162d9f2d3572c09e6decfee70572962d0c30a.jpeg"
 		multiContent = append(multiContent, openai.ChatMessagePart{
 			Type: openai.ChatMessagePartTypeImageURL,
 			ImageURL: &openai.ChatMessageImageURL{
@@ -237,4 +279,35 @@ func (cc *ChatClient) processQuery(ws *websocket.Conn, content string, images []
 		}
 	}
 	return nil
+}
+
+type OSSClient struct {
+	Endpoint        string
+	AccessKeyID     string
+	AccessKeySecret string
+	Client          *oss.Client
+}
+
+func NewOSSClient(endpoint, accessKeyID, accessKeySecret string) (*OSSClient, error) {
+	client, err := oss.New(endpoint, accessKeyID, accessKeySecret)
+	if err != nil {
+		return nil, fmt.Errorf("创建 OSS 客户端失败: %v", err)
+	}
+
+	return &OSSClient{
+		Endpoint:        endpoint,
+		AccessKeyID:     accessKeyID,
+		AccessKeySecret: accessKeySecret,
+		Client:          client,
+	}, nil
+}
+
+func (ossClient *OSSClient) CreateBucket(bucketName string) (*oss.Bucket, error) {
+	exists, _ := ossClient.Client.IsBucketExist(bucketName)
+	if !exists {
+		if err := ossClient.Client.CreateBucket(bucketName); err != nil {
+			return nil, fmt.Errorf("创建 OSS 桶失败: %v", err)
+		}
+	}
+	return ossClient.Client.Bucket(bucketName)
 }
