@@ -1,4 +1,4 @@
-# 测试图片识别(qwen-vl)
+# 图像识别(qwen-vl)
 
 > https://help.aliyun.com/zh/model-studio/vision?spm=a2c4g.11186623.0.0.c29813f0Vsn5W0
 
