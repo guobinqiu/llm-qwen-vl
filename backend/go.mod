@@ -1,4 +1,4 @@
-module github.com/guobinqiu/llm-vl
+module github.com/guobinqiu/llm-qwen-vl
 
 go 1.23
 
