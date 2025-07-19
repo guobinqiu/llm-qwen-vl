@@ -1,8 +1,8 @@
-# 测试图片识别(qwen-vl)
+# 图像识别(qwen-vl)
 
 > https://help.aliyun.com/zh/model-studio/vision?spm=a2c4g.11186623.0.0.c29813f0Vsn5W0
 
-![llm-qwen-vl](https://github.com/user-attachments/assets/dda4e233-d479-4091-be4c-45967fcd9438)
+![llm-qwen-vl](https://github.com/user-attachments/assets/4d0bc8fc-374e-4942-85f4-43691e26824b)
 
 - [x] API调通
 - [x] 图片上传
